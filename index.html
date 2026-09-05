@@ -1,0 +1,2157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Operacional | Rodoviário Shalloon de Guarulhos</title>
+    <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS (XLSX) CDN para leitura de planilhas Excel e CSV -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --bg-base: #142a32;
+            --bg-surface: #1a3843;
+            --bg-card: #1e424e;
+            --bg-card-hover: #234d5b;
+            --border-subtle: rgba(35, 180, 165, 0.22);
+            --border-strong: rgba(142, 237, 193, 0.4);
+            
+            /* Paleta fornecida pelo cliente */
+            --brand-deep: #166D89;
+            --brand-cyan: #23B4A5;
+            --brand-mint: #8EEDC1;
+            --brand-yellow: #FBD741;
+            --brand-white: #F4F3EE;
+            --brand-dark: #1E424E;
+            
+            --text-primary: #F4F3EE;
+            --text-secondary: #B4C6CC;
+            --text-muted: #7E979F;
+            
+            --shadow-card: 0 8px 24px -6px rgba(10, 25, 30, 0.45);
+            --shadow-glow: 0 0 16px rgba(35, 180, 165, 0.25);
+            --shadow-alert: 0 0 16px rgba(251, 215, 65, 0.2);
+            --radius-lg: 16px;
+            --radius-md: 10px;
+            --radius-sm: 6px;
+            --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(22, 109, 137, 0.28) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(35, 180, 165, 0.15) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(30, 66, 78, 0.5) 0px, transparent 100%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 24px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1560px;
+            margin: 0 auto;
+        }
+
+        /* HEADER */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 20px 28px;
+            background: linear-gradient(135deg, rgba(30, 66, 78, 0.95), rgba(22, 109, 137, 0.7));
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-card);
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 3px;
+            width: 100%;
+            background: linear-gradient(90deg, var(--brand-deep), var(--brand-cyan), var(--brand-mint), var(--brand-yellow));
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand-logo-icon {
+            width: 52px;
+            height: 52px;
+            background: linear-gradient(135deg, var(--brand-cyan), var(--brand-deep));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 14px rgba(35, 180, 165, 0.35);
+        }
+
+        .brand-logo-icon svg {
+            width: 30px;
+            height: 30px;
+            fill: var(--brand-white);
+        }
+
+        .header-titles h1 {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--brand-white);
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-titles p {
+            font-size: 13px;
+            color: var(--brand-mint);
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+        .header-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        /* BOTOES DE AÇÃO NO HEADER (UPLOAD & RESET) */
+        .btn-header-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 12.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            border: 1px solid transparent;
+        }
+
+        .btn-upload-excel {
+            background: linear-gradient(135deg, var(--brand-cyan), var(--brand-deep));
+            color: var(--brand-white);
+            border-color: var(--border-strong);
+            box-shadow: 0 4px 12px rgba(35, 180, 165, 0.3);
+        }
+
+        .btn-upload-excel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(35, 180, 165, 0.45);
+            background: linear-gradient(135deg, #2ad1c0, #197a9a);
+        }
+
+        .btn-reset-demo {
+            background: rgba(251, 215, 65, 0.12);
+            color: var(--brand-yellow);
+            border-color: rgba(251, 215, 65, 0.4);
+        }
+
+        .btn-reset-demo:hover {
+            background: rgba(251, 215, 65, 0.22);
+            transform: translateY(-2px);
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 16px;
+            background: rgba(35, 180, 165, 0.15);
+            border: 1px solid var(--brand-cyan);
+            border-radius: 30px;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--brand-mint);
+        }
+
+        .status-pill.rule-badge {
+            background: rgba(142, 237, 193, 0.12);
+            border-color: rgba(142, 237, 193, 0.4);
+            color: var(--brand-mint);
+        }
+
+        .status-pill.file-pill {
+            background: rgba(35, 180, 165, 0.25);
+            border-color: var(--brand-mint);
+            color: var(--brand-white);
+            font-weight: 700;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--brand-mint);
+            border-radius: 50%;
+            box-shadow: 0 0 0 0 rgba(142, 237, 193, 0.7);
+            animation: pulse 1.8s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(142, 237, 193, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(142, 237, 193, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(142, 237, 193, 0); }
+        }
+
+        /* FILTERS TOOLBAR */
+        .filters-panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 16px 22px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            box-shadow: var(--shadow-card);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1;
+            min-width: 170px;
+        }
+
+        .filter-group.search-group {
+            flex: 1.8;
+            min-width: 260px;
+        }
+
+        .filter-group label {
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+
+        .filter-input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .filter-input-wrap svg {
+            position: absolute;
+            left: 12px;
+            width: 15px;
+            height: 15px;
+            fill: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .filter-control {
+            width: 100%;
+            padding: 9px 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            color: var(--brand-white);
+            font-size: 13px;
+            font-weight: 500;
+            outline: none;
+            transition: var(--transition-smooth);
+        }
+
+        .filter-input-wrap .filter-control {
+            padding-left: 36px;
+        }
+
+        .filter-control:focus {
+            border-color: var(--brand-cyan);
+            box-shadow: 0 0 0 3px rgba(35, 180, 165, 0.2);
+        }
+
+        select.filter-control {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23B4C6CC'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 32px;
+        }
+
+        select.filter-control option {
+            background: var(--bg-card);
+            color: var(--brand-white);
+        }
+
+        .btn-reset-filters {
+            align-self: flex-end;
+            padding: 9px 16px;
+            background: transparent;
+            border: 1px dashed var(--border-subtle);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            height: 38px;
+        }
+
+        .btn-reset-filters:hover {
+            color: var(--brand-yellow);
+            border-color: var(--brand-yellow);
+            background: rgba(251, 215, 65, 0.06);
+        }
+
+        /* KPI CARDS GRID */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 20px 22px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-card);
+            transition: var(--transition-smooth);
+            cursor: default;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            background: var(--bg-card-hover);
+            border-color: rgba(35, 180, 165, 0.4);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--card-accent, var(--brand-cyan));
+        }
+
+        .kpi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .kpi-title {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .kpi-icon-badge {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .kpi-icon-badge svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .kpi-value-row {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: var(--brand-white);
+            line-height: 1;
+        }
+
+        .kpi-badge-pct {
+            font-size: 12px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .kpi-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* SPECIFIC CARD STYLES */
+        .card-liberados {
+            --card-accent: var(--brand-mint);
+        }
+        .card-liberados .kpi-icon-badge {
+            background: rgba(142, 237, 193, 0.12);
+            border-color: rgba(142, 237, 193, 0.3);
+        }
+        .card-liberados .kpi-icon-badge svg { fill: var(--brand-mint); }
+        .card-liberados .kpi-badge-pct {
+            background: rgba(142, 237, 193, 0.16);
+            color: var(--brand-mint);
+        }
+
+        .card-pendentes {
+            --card-accent: var(--brand-yellow);
+        }
+        .card-pendentes .kpi-icon-badge {
+            background: rgba(251, 215, 65, 0.12);
+            border-color: rgba(251, 215, 65, 0.3);
+        }
+        .card-pendentes .kpi-icon-badge svg { fill: var(--brand-yellow); }
+        .card-pendentes .kpi-badge-pct {
+            background: rgba(251, 215, 65, 0.16);
+            color: var(--brand-yellow);
+        }
+
+        .card-cte {
+            --card-accent: var(--brand-cyan);
+        }
+        .card-cte .kpi-icon-badge {
+            background: rgba(35, 180, 165, 0.12);
+            border-color: rgba(35, 180, 165, 0.3);
+        }
+        .card-cte .kpi-icon-badge svg { fill: var(--brand-cyan); }
+        .card-cte .kpi-badge-pct {
+            background: rgba(35, 180, 165, 0.16);
+            color: var(--brand-cyan);
+        }
+
+        .card-pedidos {
+            --card-accent: var(--brand-deep);
+        }
+        .card-pedidos .kpi-icon-badge {
+            background: rgba(22, 109, 137, 0.2);
+            border-color: rgba(22, 109, 137, 0.4);
+        }
+        .card-pedidos .kpi-icon-badge svg { fill: #48b7db; }
+        .card-pedidos .kpi-badge-pct {
+            background: rgba(22, 109, 137, 0.3);
+            color: #79d4ee;
+        }
+
+        .card-sla {
+            --card-accent: #6cdbc5;
+        }
+        .card-sla .kpi-icon-badge {
+            background: rgba(108, 219, 197, 0.12);
+            border-color: rgba(108, 219, 197, 0.3);
+        }
+        .card-sla .kpi-icon-badge svg { fill: #6cdbc5; }
+        .card-sla .kpi-badge-pct {
+            background: rgba(108, 219, 197, 0.15);
+            color: #6cdbc5;
+        }
+
+        /* CHARTS SECTION */
+        .charts-row-main {
+            display: grid;
+            grid-template-columns: 1.7fr 1.3fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .charts-row-secondary {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 1080px) {
+            .charts-row-main, .charts-row-secondary {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 22px 24px;
+            box-shadow: var(--shadow-card);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .chart-title-area h3 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--brand-white);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chart-title-area p {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .chart-badge-tag {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            color: var(--brand-mint);
+        }
+
+        .chart-canvas-wrap {
+            position: relative;
+            flex: 1;
+            min-height: 280px;
+            width: 100%;
+        }
+
+        /* SELETOR DE COR POR GRÁFICO */
+        .chart-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chart-color-picker {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            border: 1px solid var(--border-subtle);
+            border-radius: 50%;
+            cursor: pointer;
+            background: none;
+            flex-shrink: 0;
+            transition: var(--transition-smooth);
+        }
+
+        .chart-color-picker:hover {
+            border-color: var(--brand-cyan);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .chart-color-picker::-webkit-color-swatch-wrapper {
+            padding: 0;
+            border-radius: 50%;
+        }
+
+        .chart-color-picker::-webkit-color-swatch {
+            border: none;
+            border-radius: 50%;
+        }
+
+        /* TABLE SECTION */
+        .table-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow-card);
+            margin-bottom: 30px;
+        }
+
+        .table-header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .table-title-wrap h3 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--brand-white);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .table-title-wrap p {
+            font-size: 12.5px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .table-counter-pill {
+            font-size: 12px;
+            background: rgba(35, 180, 165, 0.12);
+            color: var(--brand-cyan);
+            border: 1px solid var(--border-subtle);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: var(--radius-md);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        thead {
+            background: #152d36;
+            border-bottom: 2px solid var(--border-subtle);
+        }
+
+        th {
+            padding: 13px 16px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            transition: var(--transition-smooth);
+        }
+
+        tbody tr:hover {
+            background: rgba(35, 180, 165, 0.08);
+        }
+
+        td {
+            padding: 12px 16px;
+            color: var(--brand-white);
+            vertical-align: middle;
+        }
+
+        /* TABLE BADGES */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .badge-liberado {
+            background: rgba(142, 237, 193, 0.18);
+            color: var(--brand-mint);
+            border: 1px solid rgba(142, 237, 193, 0.4);
+        }
+
+        .badge-pendente {
+            background: rgba(251, 215, 65, 0.18);
+            color: var(--brand-yellow);
+            border: 1px solid rgba(251, 215, 65, 0.4);
+        }
+
+        .badge-cte-sim {
+            background: rgba(35, 180, 165, 0.16);
+            color: var(--brand-cyan);
+            border: 1px solid rgba(35, 180, 165, 0.35);
+        }
+
+        .badge-cte-isento {
+            background: rgba(142, 237, 193, 0.14);
+            color: var(--brand-mint);
+            border: 1px solid rgba(142, 237, 193, 0.35);
+        }
+
+        .badge-cte-nao {
+            background: rgba(251, 215, 65, 0.15);
+            color: #eed66a;
+            border: 1px solid rgba(251, 215, 65, 0.35);
+        }
+
+        .etapa-tag {
+            display: inline-block;
+            padding: 4px 9px;
+            background: rgba(244, 243, 238, 0.08);
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            color: #d1dcde;
+            font-weight: 500;
+        }
+
+        .placa-tag {
+            font-family: monospace;
+            font-weight: 700;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 3px 7px;
+            border-radius: 4px;
+            font-size: 12px;
+            letter-spacing: 0.05em;
+            color: var(--brand-white);
+        }
+
+        .route-inline {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+        }
+
+        .route-arrow {
+            color: var(--brand-cyan);
+            font-weight: bold;
+        }
+
+        .client-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            display: block;
+        }
+
+        .btn-tbl-view {
+            padding: 5px 10px;
+            background: rgba(35, 180, 165, 0.15);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            color: var(--brand-mint);
+            font-size: 11.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+
+        .btn-tbl-view:hover {
+            background: var(--brand-cyan);
+            color: #0b1f25;
+        }
+
+        /* MODAL */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(10, 25, 30, 0.75);
+            backdrop-filter: blur(5px);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-box {
+            background: var(--bg-surface);
+            border: 1px solid var(--brand-cyan);
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 620px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+            overflow: hidden;
+            animation: modalFadeIn 0.25s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-header {
+            padding: 18px 24px;
+            background: linear-gradient(135deg, var(--bg-card), var(--brand-deep));
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .modal-header h4 {
+            font-size: 16px;
+            color: var(--brand-white);
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 22px;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: var(--brand-yellow);
+        }
+
+        .modal-body {
+            padding: 22px 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .modal-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .modal-field.full {
+            grid-column: span 2;
+        }
+
+        .modal-field label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+
+        .modal-field span {
+            font-size: 13.5px;
+            color: var(--brand-white);
+            font-weight: 600;
+        }
+
+        footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 14px;
+            padding: 18px 24px;
+            border-top: 1px solid var(--border-subtle);
+            color: var(--text-muted);
+            font-size: 12.5px;
+        }
+
+        footer strong {
+            color: var(--brand-mint);
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .header-titles h1 { font-size: 17px; }
+            .kpi-value { font-size: 26px; }
+            .charts-row-main, .charts-row-secondary { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- HEADER / BRANDING COM UPLOAD E REGRAS -->
+    <header>
+        <div class="header-brand">
+            <div class="brand-logo-icon">
+                <svg viewBox="0 0 24 24">
+                    <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                </svg>
+            </div>
+            <div class="header-titles">
+                <h1>Rodoviário Shalloon de Guarulhos</h1>
+                <p>Torre de Controle Operacional & Gestão de Expedição | TMS Control Tower</p>
+            </div>
+        </div>
+        
+        <div class="header-meta">
+            <!-- INPUT OCULTO DE ARQUIVO -->
+            <input type="file" id="fileUploadInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleFileUpload(event)">
+            
+            <!-- BOTÃO DE UPLOAD DE PLANILHA -->
+            <button class="btn-header-action btn-upload-excel" onclick="document.getElementById('fileUploadInput').click()" title="Importar base de dados do cliente (Excel ou CSV)">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+                </svg>
+                <span>Upload Planilha (.xlsx / .csv)</span>
+            </button>
+
+            <!-- BOTÃO PARA RESTAURAR DADOS DEMO (EXIBIDO APÓS UPLOAD) -->
+            <button class="btn-header-action btn-reset-demo" id="btnRestoreDemo" style="display: none;" onclick="restoreDemoData()" title="Voltar para os dados fictícios padrão">
+                <span>Restaurar Base Padrão</span>
+            </button>
+
+            <!-- STATUS DO ARQUIVO ATUAL -->
+            <div class="status-pill file-pill" id="fileStatusBadge" style="display: none;">
+                <span class="pulse-dot"></span>
+                <span id="fileStatusText">Planilha Carregada</span>
+            </div>
+
+            <!-- REGRA ATIVA -->
+            <div class="status-pill rule-badge" title="Regra Ativa: Clientes cadastrados exigem emissão de CT-e por nós (não são isentos)">
+                <span class="pulse-dot"></span>
+                <span>Regra CT-e: Emissão Obrigatória (Lista de Clientes)</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- INTERACTIVE FILTERS BAR -->
+    <div class="filters-panel">
+        <div class="filter-group search-group">
+            <label>Busca Inteligente</label>
+            <div class="filter-input-wrap">
+                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                <input type="text" id="searchInput" class="filter-control" placeholder="Filtrar por pedido, cavalo, carreta, motorista, destino..." onkeyup="filterData()">
+            </div>
+        </div>
+
+        <div class="filter-group">
+            <label>Cliente / Embarcador</label>
+            <select id="clientFilter" class="filter-control" onchange="filterData()">
+                <option value="TODOS">Todos os Clientes</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Status do Veículo</label>
+            <select id="statusFilter" class="filter-control" onchange="filterData()">
+                <option value="TODOS">Todos os Status</option>
+                <option value="LIBERADO">Apenas Liberados</option>
+                <option value="PENDENTE">Apenas Pendentes</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Etapa da Carga</label>
+            <select id="etapaFilter" class="filter-control" onchange="filterData()">
+                <option value="TODOS">Todas as Etapas</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Tipo Frota</label>
+            <select id="frotaFilter" class="filter-control" onchange="filterData()">
+                <option value="TODOS">Todas as Frotas</option>
+                <option value="PROPRIO">Próprio</option>
+                <option value="AGREGADO">Agregado</option>
+                <option value="TERCEIRO">Terceiro</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label>Status CT-e</label>
+            <select id="cteFilter" class="filter-control" onchange="filterData()">
+                <option value="TODOS">Todos os Status</option>
+                <option value="SIM">CT-e Emitido</option>
+                <option value="ISENTO">Emissão por Conta do Cliente</option>
+                <option value="NAO">Pendente (Exigido)</option>
+            </select>
+        </div>
+
+        <button class="btn-reset-filters" onclick="resetFilters()">
+            Limpar Filtros
+        </button>
+    </div>
+
+    <!-- 5 STRATEGIC KPI CARDS -->
+    <div class="kpi-grid">
+        <!-- 1. VEÍCULOS LIBERADOS -->
+        <div class="kpi-card card-liberados">
+            <div class="kpi-header">
+                <span class="kpi-title">Veículos Liberados</span>
+                <div class="kpi-icon-badge">
+                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                </div>
+            </div>
+            <div class="kpi-value-row">
+                <span class="kpi-value" id="kpiLiberados">0</span>
+                <span class="kpi-badge-pct" id="kpiLiberadosPct">0%</span>
+            </div>
+            <div class="kpi-desc">
+                <span>Prontos p/ trânsito (CT-e Emitido ou Conta do Cliente)</span>
+            </div>
+        </div>
+
+        <!-- 2. VEÍCULOS PENDENTES -->
+        <div class="kpi-card card-pendentes">
+            <div class="kpi-header">
+                <span class="kpi-title">Veículos Pendentes</span>
+                <div class="kpi-icon-badge">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                </div>
+            </div>
+            <div class="kpi-value-row">
+                <span class="kpi-value" id="kpiPendentes">0</span>
+                <span class="kpi-badge-pct" id="kpiPendentesPct">0%</span>
+            </div>
+            <div class="kpi-desc">
+                <span>Aguardando CT-e obrigatório ou pátio</span>
+            </div>
+        </div>
+
+        <!-- 3. CONFORMIDADE CT-E -->
+        <div class="kpi-card card-cte">
+            <div class="kpi-header">
+                <span class="kpi-title">Conformidade CT-e</span>
+                <div class="kpi-icon-badge">
+                    <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                </div>
+            </div>
+            <div class="kpi-value-row">
+                <span class="kpi-value" id="kpiCteTotal">0</span>
+                <span class="kpi-badge-pct" id="kpiCtePct">0%</span>
+            </div>
+            <div class="kpi-desc">
+                <span id="kpiCteDesc">0 emitidos • 0 p/ conta cliente</span>
+            </div>
+        </div>
+
+        <!-- 4. TOTAL DE PEDIDOS ATIVOS -->
+        <div class="kpi-card card-pedidos">
+            <div class="kpi-header">
+                <span class="kpi-title">Total de Cargas</span>
+                <div class="kpi-icon-badge">
+                    <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+                </div>
+            </div>
+            <div class="kpi-value-row">
+                <span class="kpi-value" id="kpiTotalPedidos">0</span>
+                <span class="kpi-badge-pct" id="kpiClientesAtivos">0 Clientes</span>
+            </div>
+            <div class="kpi-desc">
+                <span>Cargas sob monitoramento</span>
+            </div>
+        </div>
+
+        <!-- 5. SLA / PONTUALIDADE -->
+        <div class="kpi-card card-sla">
+            <div class="kpi-header">
+                <span class="kpi-title">Pontualidade (SLA / ETA)</span>
+                <div class="kpi-icon-badge">
+                    <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                </div>
+            </div>
+            <div class="kpi-value-row">
+                <span class="kpi-value" id="kpiSlaPct">0%</span>
+                <span class="kpi-badge-pct" id="kpiNoPrazoCount">0 no prazo</span>
+            </div>
+            <div class="kpi-desc">
+                <span>Performance de entregas</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHARTS SECTION - ROW 1 -->
+    <div class="charts-row-main">
+        <!-- CHART 1: PEDIDOS POR CLIENTE -->
+        <div class="chart-box">
+            <div class="chart-header">
+                <div class="chart-title-area">
+                    <h3>
+                        <svg width="18" height="18" fill="#23B4A5" viewBox="0 0 24 24"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg>
+                        Volume de Pedidos por Cliente
+                    </h3>
+                    <p>Concentração de demandas por embarcador e conta logística</p>
+                </div>
+                <div class="chart-header-actions">
+                    <span class="chart-badge-tag" id="chartClientCount">0 Clientes</span>
+                    <input type="color" class="chart-color-picker" id="colorPickerClient" value="#23B4A5" title="Cor do gráfico" onchange="updateChartColor('client', this.value)">
+                </div>
+            </div>
+            <div class="chart-canvas-wrap">
+                <canvas id="clientOrdersChart"></canvas>
+            </div>
+        </div>
+
+        <!-- CHART 2: ETAPAS DA OPERAÇÃO -->
+        <div class="chart-box">
+            <div class="chart-header">
+                <div class="chart-title-area">
+                    <h3>
+                        <svg width="18" height="18" fill="#8EEDC1" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                        Status Operacional por Etapa
+                    </h3>
+                    <p>Tracking do fluxo das viagens na malha rodoviária</p>
+                </div>
+                <div class="chart-header-actions">
+                    <span class="chart-badge-tag">Pipeline TMS</span>
+                    <input type="color" class="chart-color-picker" id="colorPickerStages" value="#23B4A5" title="Cor do gráfico" onchange="updateChartColor('stages', this.value)">
+                </div>
+            </div>
+            <div class="chart-canvas-wrap">
+                <canvas id="stagesChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHARTS SECTION - ROW 2 -->
+    <div class="charts-row-secondary">
+        <!-- CHART 3: COMPOSIÇÃO DE FROTA & LIBERAÇÃO -->
+        <div class="chart-box">
+            <div class="chart-header">
+                <div class="chart-title-area">
+                    <h3>
+                        <svg width="18" height="18" fill="#FBD741" viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+                        Perfil da Frota vs. Liberação
+                    </h3>
+                    <p>Comparativo entre Frota Própria, Agregada e Terceira</p>
+                </div>
+                <div class="chart-header-actions">
+                    <span class="chart-badge-tag">Frota</span>
+                    <input type="color" class="chart-color-picker" id="colorPickerFleet" value="#8EEDC1" title="Cor do gráfico" onchange="updateChartColor('fleet', this.value)">
+                </div>
+            </div>
+            <div class="chart-canvas-wrap">
+                <canvas id="fleetChart"></canvas>
+            </div>
+        </div>
+
+        <!-- CHART 4: TOP DESTINOS -->
+        <div class="chart-box">
+            <div class="chart-header">
+                <div class="chart-title-area">
+                    <h3>
+                        <svg width="18" height="18" fill="#166D89" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                        Top Destinos mais Atendidos
+                    </h3>
+                    <p>Praças com maior frequência de expedições</p>
+                </div>
+                <div class="chart-header-actions">
+                    <span class="chart-badge-tag">Rotas</span>
+                    <input type="color" class="chart-color-picker" id="colorPickerDestinations" value="#166D89" title="Cor do gráfico" onchange="updateChartColor('destinations', this.value)">
+                </div>
+            </div>
+            <div class="chart-canvas-wrap">
+                <canvas id="destinationsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATA TABLE OPERACIONAL COMPLETA -->
+    <div class="table-section">
+        <div class="table-header-bar">
+            <div class="table-title-wrap">
+                <h3>
+                    <svg width="20" height="20" fill="#8EEDC1" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+                    Listagem Operacional de Cargas & Expedição
+                </h3>
+                <p>Detalhamento por veículo, motorista, regra fiscal de CT-e e previsão de chegada (ETA)</p>
+            </div>
+            <div class="table-counter-pill" id="tableRowCount">
+                Exibindo 0 registros
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table id="operationsTable">
+                <thead>
+                    <tr>
+                        <th>Nº Pedido / Ref.</th>
+                        <th>Cliente & Grupo</th>
+                        <th>Origem / Destino</th>
+                        <th>Cavalo / Carreta</th>
+                        <th>Motorista</th>
+                        <th>Tipo Frota</th>
+                        <th>ETA Destino</th>
+                        <th>Status CT-e</th>
+                        <th>Status Veículo</th>
+                        <th>Etapa</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Populated via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- MODAL DE DETALHES -->
+    <div class="modal-backdrop" id="detailsModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h4 id="modalTitle">Detalhes da Ordem de Carga</h4>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Preenchido via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+        <div style="width: 100%; text-align: center;">
+            <strong>Rodoviário Shalloon de Guarulhos Logística e Transportes Ltda.</strong> • Sistema de Gestão e Expedição de Cargas
+        </div>
+    </footer>
+
+</div>
+
+<!-- APPLICATION JAVASCRIPT -->
+<script>
+    // PALETA OFICIAL
+    const PALETTE = {
+        baseDark: '#1E424E',
+        oceanBlue: '#166D89',
+        vibrantCyan: '#23B4A5',
+        mintGreen: '#8EEDC1',
+        goldenYellow: '#FBD741',
+        offWhite: '#F4F3EE',
+        cardBg: '#1a3843'
+    };
+
+    // =========================================================================
+    // REGRA DE NEGÓCIO: CLIENTES COM EMISSÃO DE CT-E OBRIGATÓRIA (POR NÓS)
+    // Esta lista é o inverso do que o nome antigo sugeria: os clientes abaixo
+    // são justamente aqueles para os quais A TRANSPORTADORA precisa emitir o
+    // CT-e — ou seja, NUNCA são isentos, mesmo que a planilha importada traga
+    // algum texto ambíguo sugerindo emissão por conta do cliente.
+    // Fora dessa lista, o status é desconhecido (pode ser emissão nossa, do
+    // cliente, ou nem ser exigido) — nesses casos seguimos o que vier na
+    // própria planilha (coluna "POSSUI CT-E"), sem presumir nada.
+    // =========================================================================
+    const CLIENTES_EMISSAO_OBRIGATORIA_CTE = [
+        "SEB",
+        "MEGAMAMUTE",
+        "PANINI",
+        "PLURAL",
+        "SHERWIN",
+        "MILHO",
+        "ANTILHAS",
+        "ARCOR",
+        "EMBELLEZE",
+        "FLEX",
+        "KABUM",
+        "MAGAZINE LUIZA",
+        "ORTOBOM",
+        "PEPSICO",
+        "POSITIVO",
+        "PROCTER",
+        "SOTREQ",
+        "TCL",
+        "WINE"
+    ];
+
+    // Função para verificar se o cliente está na lista de emissão obrigatória por nós
+    function isClienteEmissaoObrigatoria(clienteNome, grupoNome = '') {
+        if (!clienteNome) return false;
+        const normaliza = str => (str || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        const cNorm = normaliza(clienteNome);
+        const gNorm = normaliza(grupoNome);
+
+        return CLIENTES_EMISSAO_OBRIGATORIA_CTE.some(nome => {
+            const nNorm = normaliza(nome);
+            return cNorm.includes(nNorm) || gNorm.includes(nNorm);
+        });
+    }
+
+    // BASE DE DADOS COMPLETA PADRÃO (DEMONSTRAÇÃO INICIAL)
+    const rawDataInicial = [
+        { emp: "01", ref: "REF-99201", ordem: "ORD-8401", pedido: "PED-10294", cliente: "KABUM", grupo: "Kabum", origem: "Guarulhos / SP", destino: "Belo Horizonte / MG", tipoCarga: "Eletrônicos", motorista: "Carlos Eduardo Silva", cavalo: "BRA2E19", carreta: "FGH4510", proprietario: "Próprio", possuiCteOriginal: "NÃO", etapaOriginal: "Em Trânsito", etaTransp: "03/09 06:00", etaOrigem: "03/09 08:30", etaDestino: "04/09 14:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99202", ordem: "ORD-8402", pedido: "PED-10295", cliente: "MAGAZINE LUIZA", grupo: "Magalu", origem: "Louveira / SP", destino: "Curitiba / PR", tipoCarga: "E-Commerce / Eletro", motorista: "Roberto Marcondes", cavalo: "EPR9A88", carreta: "KLR8921", proprietario: "Agregado", possuiCteOriginal: "NÃO", etapaOriginal: "Em Trânsito", etaTransp: "03/09 07:00", etaOrigem: "03/09 09:15", etaDestino: "04/09 11:30", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99203", ordem: "ORD-8403", pedido: "PED-10296", cliente: "Unilever", grupo: "Unilever", origem: "Valinhos / SP", destino: "Rio de Janeiro / RJ", tipoCarga: "Higiene / Limpeza", motorista: "Marcos Vinicius", cavalo: "DXZ3312", carreta: "MNO4455", proprietario: "Terceiro", possuiCteOriginal: "NÃO", etapaOriginal: "Aguardando CT-e", etaTransp: "03/09 08:00", etaOrigem: "03/09 11:00", etaDestino: "04/09 18:00", sla: "Em Risco" },
+        { emp: "01", ref: "REF-99204", ordem: "ORD-8404", pedido: "PED-10297", cliente: "PEPSICO", grupo: "PepsiCo", origem: "Itu / SP", destino: "Uberlândia / MG", tipoCarga: "Snacks / Bebidas", motorista: "Antônio Ferreira", cavalo: "QWE7890", carreta: "RTY1234", proprietario: "Próprio", possuiCteOriginal: "NÃO", etapaOriginal: "Em Trânsito", etaTransp: "02/09 22:00", etaOrigem: "03/09 06:00", etaDestino: "04/09 16:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99205", ordem: "ORD-8405", pedido: "PED-10298", cliente: "ARCOR", grupo: "Arcor", origem: "Campinas / SP", destino: "Salvador / BA", tipoCarga: "Chocolates / Doces", motorista: "João Paulo Batista", cavalo: "HJK9012", carreta: "UIO3456", proprietario: "Próprio", possuiCteOriginal: "NÃO", etapaOriginal: "Em Trânsito", etaTransp: "02/09 18:00", etaOrigem: "02/09 21:00", etaDestino: "06/09 10:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99206", ordem: "ORD-8406", pedido: "PED-10299", cliente: "M. Dias Branco", grupo: "M. Dias", origem: "São Caetano / SP", destino: "Recife / PE", tipoCarga: "Massas / Biscoitos", motorista: "Gilberto Alves", cavalo: "ASD5678", carreta: "ZXC2345", proprietario: "Terceiro", possuiCteOriginal: "NÃO", etapaOriginal: "Aguardando Liberação Pátio", etaTransp: "03/09 09:00", etaOrigem: "03/09 14:00", etaDestino: "08/09 08:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99207", ordem: "ORD-8407", pedido: "PED-10300", cliente: "TCL", grupo: "SEMP TCL", origem: "Guarulhos / SP", destino: "Itajaí / SC", tipoCarga: "Smart TVs / Painéis", motorista: "Marcelo Dantas", cavalo: "POI4321", carreta: "LKJ9876", proprietario: "Agregado", possuiCteOriginal: "NÃO", etapaOriginal: "Em Trânsito", etaTransp: "03/09 05:00", etaOrigem: "03/09 07:45", etaDestino: "04/09 12:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99208", ordem: "ORD-8408", pedido: "PED-10301", cliente: "SHERWIN", grupo: "Sherwin Williams", origem: "Sumaré / SP", destino: "Santos / SP", tipoCarga: "Tintas e Revestimentos", motorista: "Fernando Costa", cavalo: "MNB6543", carreta: "VCX8765", proprietario: "Próprio", possuiCteOriginal: "NÃO", etapaOriginal: "No Destino / Descarga", etaTransp: "03/09 04:00", etaOrigem: "03/09 06:30", etaDestino: "03/09 16:30", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99209", ordem: "ORD-8409", pedido: "PED-10302", cliente: "Ambev S.A.", grupo: "Ambev", origem: "Guarulhos / SP", destino: "Campinas / SP", tipoCarga: "Bebidas", motorista: "Cláudio Ramos", cavalo: "RFV8901", carreta: "TGB2341", proprietario: "Próprio", possuiCteOriginal: "SIM", etapaOriginal: "Entregue / Concluído", etaTransp: "02/09 14:00", etaOrigem: "02/09 16:00", etaDestino: "03/09 09:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99210", ordem: "ORD-8410", pedido: "PED-10303", cliente: "ORTOBOM", grupo: "Ortobom", origem: "Guarulhos / SP", destino: "Ribeirão Preto / SP", tipoCarga: "Colchões / Espumas", motorista: "Leandro Nogueira", cavalo: "YHN5672", carreta: "UJM9012", proprietario: "Próprio", possuiCteOriginal: "NÃO", etapaOriginal: "Em Trânsito", etaTransp: "03/09 06:30", etaOrigem: "03/09 08:00", etaDestino: "03/09 20:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99211", ordem: "ORD-8411", pedido: "PED-10304", cliente: "WINE", grupo: "Wine", origem: "Serra / ES", destino: "São Paulo / SP", tipoCarga: "Vinhos / Bebidas Finas", motorista: "Valter Ribeiro", cavalo: "EDC4567", carreta: "WSX8901", proprietario: "Agregado", possuiCteOriginal: "NÃO", etapaOriginal: "Em Trânsito", etaTransp: "03/09 07:15", etaOrigem: "03/09 09:45", etaDestino: "04/09 15:30", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99212", ordem: "ORD-8412", pedido: "PED-10305", cliente: "Bunge Alimentos", grupo: "Bunge", origem: "Santos / SP", destino: "Goiânia / GO", tipoCarga: "Óleo Envasado", motorista: "Rodrigo Toledo", cavalo: "QAZ1290", carreta: "WSX3489", proprietario: "Terceiro", possuiCteOriginal: "NÃO", etapaOriginal: "Aguardando CT-e", etaTransp: "03/09 10:00", etaOrigem: "03/09 15:00", etaDestino: "05/09 14:00", sla: "Em Risco" },
+        { emp: "01", ref: "REF-99213", ordem: "ORD-8413", pedido: "PED-10306", cliente: "SEB", grupo: "Groupe SEB", origem: "São Bernardo / SP", destino: "Rio de Janeiro / RJ", tipoCarga: "Eletroportáteis", motorista: "Paulo Sérgio", cavalo: "PLM7891", carreta: "OKN2340", proprietario: "Próprio", possuiCteOriginal: "NÃO", etapaOriginal: "No Destino / Descarga", etaTransp: "03/09 02:00", etaOrigem: "03/09 04:30", etaDestino: "03/09 17:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99214", ordem: "ORD-8414", pedido: "PED-10307", cliente: "PROCTER", grupo: "P&G", origem: "Louveira / SP", destino: "Porto Alegre / RS", tipoCarga: "Cuidados Pessoais", motorista: "José Renato", cavalo: "IKM6789", carreta: "UHB3451", proprietario: "Próprio", possuiCteOriginal: "NÃO", etapaOriginal: "Em Trânsito", etaTransp: "02/09 19:00", etaOrigem: "02/09 22:30", etaDestino: "05/09 08:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99215", ordem: "ORD-8415", pedido: "PED-10308", cliente: "POSITIVO", grupo: "Positivo Tecnologia", origem: "Curitiba / PR", destino: "Vitória / ES", tipoCarga: "Hardware / TI", motorista: "Alexandre Lima", cavalo: "YGV4561", carreta: "TFC8912", proprietario: "Agregado", possuiCteOriginal: "NÃO", etapaOriginal: "Em Trânsito", etaTransp: "03/09 08:00", etaOrigem: "03/09 10:30", etaDestino: "04/09 22:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99216", ordem: "ORD-8416", pedido: "PED-10309", cliente: "PANINI", grupo: "Panini", origem: "Barueri / SP", destino: "Santos / SP", tipoCarga: "Publicações / Álbuns", motorista: "Wagner Silveira", cavalo: "RDX9023", carreta: "ESZ4519", proprietario: "Próprio", possuiCteOriginal: "NÃO", etapaOriginal: "No Destino / Descarga", etaTransp: "03/09 03:00", etaOrigem: "03/09 05:00", etaDestino: "03/09 15:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99217", ordem: "ORD-8417", pedido: "PED-10310", cliente: "M. Dias Branco", grupo: "M. Dias", origem: "Guarulhos / SP", destino: "Brasília / DF", tipoCarga: "Alimentos Secos", motorista: "Danilo Prado", cavalo: "WAQ3214", carreta: "XSW6541", proprietario: "Terceiro", possuiCteOriginal: "NÃO", etapaOriginal: "Aguardando Liberação Pátio", etaTransp: "03/09 11:00", etaOrigem: "03/09 16:00", etaDestino: "05/09 18:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99218", ordem: "ORD-8418", pedido: "PED-10311", cliente: "EMBELLEZE", grupo: "Embelleze", origem: "Nova Iguaçu / RJ", destino: "Florianópolis / SC", tipoCarga: "Cosméticos Capilares", motorista: "Samuel Martins", cavalo: "CDE7812", carreta: "VFR9034", proprietario: "Próprio", possuiCteOriginal: "NÃO", etapaOriginal: "Em Trânsito", etaTransp: "03/09 06:00", etaOrigem: "03/09 08:30", etaDestino: "04/09 16:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99219", ordem: "ORD-8419", pedido: "PED-10312", cliente: "ANTILHAS", grupo: "Antilhas Embalagens", origem: "Santana de Parnaíba / SP", destino: "Curitiba / PR", tipoCarga: "Embalagens Especiais", motorista: "Fábio Guimarães", cavalo: "BGT5619", carreta: "NHY1298", proprietario: "Próprio", possuiCteOriginal: "NÃO", etapaOriginal: "Em Trânsito", etaTransp: "03/09 05:30", etaOrigem: "03/09 07:30", etaDestino: "03/09 23:30", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99220", ordem: "ORD-8420", pedido: "PED-10313", cliente: "Ambev S.A.", grupo: "Ambev", origem: "Agudos / SP", destino: "São Paulo / SP", tipoCarga: "Cerveja Garrafa", motorista: "Renan Moura", cavalo: "MJU8912", carreta: "KI89012", proprietario: "Agregado", possuiCteOriginal: "SIM", etapaOriginal: "Entregue / Concluído", etaTransp: "02/09 20:00", etaOrigem: "02/09 23:00", etaDestino: "03/09 07:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99221", ordem: "ORD-8421", pedido: "PED-10314", cliente: "Bunge Alimentos", grupo: "Bunge", origem: "Santos / SP", destino: "Belo Horizonte / MG", tipoCarga: "Trigo Granel", motorista: "Everton Lopes", cavalo: "ZAQ9832", carreta: "XSW1945", proprietario: "Próprio", possuiCteOriginal: "SIM", etapaOriginal: "Em Trânsito", etaTransp: "03/09 04:30", etaOrigem: "03/09 07:00", etaDestino: "04/09 13:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99222", ordem: "ORD-8422", pedido: "PED-10315", cliente: "SOTREQ", grupo: "Sotreq Caterpillar", origem: "São Paulo / SP", destino: "Campinas / SP", tipoCarga: "Peças Pesadas", motorista: "Cássio Antunes", cavalo: "CDE3491", carreta: "VFR5612", proprietario: "Próprio", possuiCteOriginal: "NÃO", etapaOriginal: "Entregue / Concluído", etaTransp: "02/09 16:00", etaOrigem: "02/09 18:30", etaDestino: "03/09 06:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99223", ordem: "ORD-8423", pedido: "PED-10316", cliente: "Unilever", grupo: "Unilever", origem: "Guarulhos / SP", destino: "Rio de Janeiro / RJ", tipoCarga: "Nutrição Infantil", motorista: "Felipe Borges", cavalo: "NHY4521", carreta: "MJU7845", proprietario: "Terceiro", possuiCteOriginal: "NÃO", etapaOriginal: "Aguardando CT-e", etaTransp: "03/09 11:30", etaOrigem: "03/09 14:00", etaDestino: "04/09 12:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99224", ordem: "ORD-8424", pedido: "PED-10317", cliente: "Ambev S.A.", grupo: "Ambev", origem: "Jaguariúna / SP", destino: "Santos / SP", tipoCarga: "Refrigerantes", motorista: "Maurício Neves", cavalo: "KI81290", carreta: "LO90341", proprietario: "Próprio", possuiCteOriginal: "SIM", etapaOriginal: "No Destino / Descarga", etaTransp: "03/09 05:00", etaOrigem: "03/09 07:00", etaDestino: "03/09 14:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99225", ordem: "ORD-8425", pedido: "PED-10318", cliente: "PLURAL", grupo: "Plural Gráfica", origem: "Santana de Parnaíba / SP", destino: "Uberlândia / MG", tipoCarga: "Impressos Comerciais", motorista: "Tiago Siqueira", cavalo: "PO09812", carreta: "MN56123", proprietario: "Agregado", possuiCteOriginal: "NÃO", etapaOriginal: "Em Trânsito", etaTransp: "03/09 06:45", etaOrigem: "03/09 09:15", etaDestino: "04/09 17:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99226", ordem: "ORD-8426", pedido: "PED-10319", cliente: "FLEX", grupo: "Flex Indústria", origem: "Guarulhos / SP", destino: "Fortaleza / CE", tipoCarga: "Placas Eletrônicas", motorista: "Ailton Correia", cavalo: "ZA19034", carreta: "XW89123", proprietario: "Terceiro", possuiCteOriginal: "NÃO", etapaOriginal: "Em Trânsito", etaTransp: "03/09 12:00", etaOrigem: "03/09 17:00", etaDestino: "09/09 10:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99227", ordem: "ORD-8427", pedido: "PED-10320", cliente: "MILHO", grupo: "Agro Milho", origem: "Ribeirão Preto / SP", destino: "Belo Horizonte / MG", tipoCarga: "Derivados de Milho", motorista: "Bruno Fagundes", cavalo: "ED45129", carreta: "RF78231", proprietario: "Próprio", possuiCteOriginal: "NÃO", etapaOriginal: "Em Trânsito", etaTransp: "03/09 03:30", etaOrigem: "03/09 06:15", etaDestino: "04/09 09:30", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99228", ordem: "ORD-8428", pedido: "PED-10321", cliente: "MEGAMAMUTE", grupo: "MegaMamute", origem: "Londrina / PR", destino: "Curitiba / PR", tipoCarga: "Informática e Games", motorista: "Wilson Castro", cavalo: "TG56901", carreta: "YH23901", proprietario: "Próprio", possuiCteOriginal: "NÃO", etapaOriginal: "Em Trânsito", etaTransp: "03/09 07:00", etaOrigem: "03/09 09:00", etaDestino: "04/09 13:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99229", ordem: "ORD-8429", pedido: "PED-10322", cliente: "Ambev S.A.", grupo: "Ambev", origem: "Guarulhos / SP", destino: "Ribeirão Preto / SP", tipoCarga: "Cerveja Lata", motorista: "Luciano Pires", cavalo: "UJ89123", carreta: "IK45129", proprietario: "Agregado", possuiCteOriginal: "SIM", etapaOriginal: "Em Trânsito", etaTransp: "03/09 08:30", etaOrigem: "03/09 11:00", etaDestino: "03/09 22:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99230", ordem: "ORD-8430", pedido: "PED-10323", cliente: "Bunge Alimentos", grupo: "Bunge", origem: "Santos / SP", destino: "Campinas / SP", tipoCarga: "Farelo Ensacado", motorista: "Djalma Souza", cavalo: "OL12903", carreta: "PM78129", proprietario: "Próprio", possuiCteOriginal: "SIM", etapaOriginal: "Em Trânsito", etaTransp: "03/09 04:00", etaOrigem: "03/09 06:30", etaDestino: "03/09 18:30", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99231", ordem: "ORD-8431", pedido: "PED-10324", cliente: "KABUM", grupo: "Kabum", origem: "Guarulhos / SP", destino: "Belo Horizonte / MG", tipoCarga: "Periféricos", motorista: "Geraldo Magela", cavalo: "QA78120", carreta: "WS23901", proprietario: "Próprio", possuiCteOriginal: "NÃO", etapaOriginal: "No Destino / Descarga", etaTransp: "03/09 01:30", etaOrigem: "03/09 04:00", etaDestino: "03/09 17:30", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99232", ordem: "ORD-8432", pedido: "PED-10325", cliente: "Unilever", grupo: "Unilever", origem: "Vinhedo / SP", destino: "Rio de Janeiro / RJ", tipoCarga: "Higiene / Limpeza", motorista: "Sandro Becker", cavalo: "ED90123", carreta: "RF34129", proprietario: "Terceiro", possuiCteOriginal: "NÃO", etapaOriginal: "Aguardando Liberação Pátio", etaTransp: "03/09 12:30", etaOrigem: "03/09 16:30", etaDestino: "04/09 23:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99233", ordem: "ORD-8433", pedido: "PED-10326", cliente: "MAGAZINE LUIZA", grupo: "Magalu", origem: "Guarulhos / SP", destino: "Porto Alegre / RS", tipoCarga: "Utilidades Domésticas", motorista: "Nelson Piquet", cavalo: "TG78129", carreta: "YH89123", proprietario: "Próprio", possuiCteOriginal: "NÃO", etapaOriginal: "Em Trânsito", etaTransp: "02/09 21:00", etaOrigem: "03/09 01:00", etaDestino: "05/09 15:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99234", ordem: "ORD-8434", pedido: "PED-10327", cliente: "Ambev S.A.", grupo: "Ambev", origem: "Jaguariúna / SP", destino: "Belo Horizonte / MG", tipoCarga: "Bebidas", motorista: "Otávio Mesquita", cavalo: "UJ23901", carreta: "IK78123", proprietario: "Agregado", possuiCteOriginal: "SIM", etapaOriginal: "Em Trânsito", etaTransp: "03/09 08:00", etaOrigem: "03/09 10:45", etaDestino: "04/09 16:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99235", ordem: "ORD-8435", pedido: "PED-10328", cliente: "PEPSICO", grupo: "PepsiCo", origem: "Guarulhos / SP", destino: "Santos / SP", tipoCarga: "Bebidas Isotônicas", motorista: "Helio Castroneves", cavalo: "OL89123", carreta: "PM23901", proprietario: "Próprio", possuiCteOriginal: "NÃO", etapaOriginal: "Entregue / Concluído", etaTransp: "02/09 15:00", etaOrigem: "02/09 17:30", etaDestino: "03/09 08:00", sla: "No Prazo" },
+        { emp: "01", ref: "REF-99236", ordem: "ORD-8436", pedido: "PED-10329", cliente: "M. Dias Branco", grupo: "M. Dias", origem: "São Caetano / SP", destino: "Curitiba / PR", tipoCarga: "Alimentos Secos", motorista: "Vitor Meireles", cavalo: "QA23901", carreta: "WS89120", proprietario: "Terceiro", possuiCteOriginal: "NÃO", etapaOriginal: "Aguardando CT-e", etaTransp: "03/09 13:00", etaOrigem: "03/09 17:00", etaDestino: "04/09 20:00", sla: "No Prazo" }
+    ];
+
+    // FUNÇÃO QUE APLICA AS REGRAS OPERACIONAIS E FISCAIS (ISENÇÃO / EMISSÃO POR CONTA DO CLIENTE)
+    function processRawData(items) {
+        return items.map(item => {
+            const emissaoObrigatoria = isClienteEmissaoObrigatoria(item.cliente, item.grupo);
+
+            // Verifica se no dado importado já constava algo de isenção ou emissão própria.
+            // Clientes de emissão obrigatória (lista acima) nunca contam como isentos, mesmo que
+            // a planilha traga um texto ambíguo — para eles a regra de negócio já é conhecida.
+            const rawCteStr = (item.possuiCteOriginal || "").toUpperCase();
+            const clienteEmiteContaPropria = !emissaoObrigatoria && (
+                rawCteStr.includes("CONTA") || 
+                rawCteStr.includes("ISENTO") || 
+                rawCteStr.includes("DISPENSADO") || 
+                rawCteStr.includes("CLIENTE")
+            );
+
+            let statusFiscalCte;
+            let statusVeiculo;
+            let etapa = item.etapaOriginal || "Em Trânsito";
+
+            if (rawCteStr === "SIM" || rawCteStr === "S" || rawCteStr === "EMITIDO") {
+                statusFiscalCte = "SIM"; // CT-e Emitido
+                statusVeiculo = "LIBERADO";
+            } else if (clienteEmiteContaPropria) {
+                // REGRA ATUALIZADA: EMISSÃO POR CONTA DO CLIENTE
+                statusFiscalCte = "ISENTO"; // Chave interna para filtros
+                if (etapa === "Aguardando CT-e") {
+                    etapa = "Em Trânsito";
+                }
+                statusVeiculo = "LIBERADO"; // Não tem bloqueio fiscal
+            } else {
+                statusFiscalCte = "NAO"; // Pendente de CT-e
+                statusVeiculo = "PENDENTE";
+            }
+
+            // Bloqueios físicos/operacionais continuam pendentes no pátio
+            if (etapa === "Aguardando Liberação Pátio") {
+                statusVeiculo = "PENDENTE";
+            }
+
+            return {
+                ...item,
+                isIsentoCte: clienteEmiteContaPropria,
+                isEmissaoObrigatoria: emissaoObrigatoria,
+                possuiCte: statusFiscalCte,
+                statusVeiculo: statusVeiculo,
+                etapa: etapa
+            };
+        });
+    }
+
+    // BASE ATUAL EM MEMÓRIA
+    let rawData = processRawData(rawDataInicial);
+    let currentFilteredData = [...rawData];
+    let clientChart, stagesChart, fleetChart, destinationsChart;
+
+    // NORMALIZAÇÃO DE CABEÇALHO PARA MAPEAMENTO INTELIGENTE DE COLUNAS
+    function normalizeHeader(key) {
+        return String(key || '')
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-z0-9]/g, "");
+    }
+
+    // Extrai a parte "Cidade / UF" de valores exportados como "CIDADE - UF - BRASIL",
+    // usando a coluna de UF separada quando disponível. Mantém compatibilidade com
+    // planilhas que já vêm no formato curto "Cidade / UF".
+    function formatCidadeUf(rawValue, ufValue) {
+        if (!rawValue) return '';
+        const val = String(rawValue).trim();
+        if (val.includes(' - ')) {
+            const cidade = val.split(' - ')[0].trim();
+            const uf = (ufValue || val.split(' - ')[1] || '').trim();
+            return uf ? `${cidade} / ${uf}` : cidade;
+        }
+        return val;
+    }
+
+    // Calcula um SLA aproximado quando a planilha do cliente não traz uma coluna própria de SLA.
+    // Compara a Previsão de Chegada (ETA Destino) com a Data de Descarga real (se já finalizado)
+    // ou com o momento atual (se ainda em andamento). Isso é uma estimativa — não substitui uma
+    // regra de SLA definida junto com o cliente.
+    function parseDataBR(str) {
+        if (!str) return null;
+        const s = String(str).trim();
+        const m = s.match(/(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
+        if (!m) return null;
+        return new Date(+m[3], +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0));
+    }
+
+    function estimarSla(etapa, etaDestinoStr, dataDescargaStr) {
+        const eta = parseDataBR(etaDestinoStr);
+        if (!eta) return 'No Prazo';
+        const etapaNorm = String(etapa || '').toLowerCase();
+        if (etapaNorm.includes('finaliz') || dataDescargaStr) {
+            const real = parseDataBR(dataDescargaStr);
+            if (real) return real.getTime() <= eta.getTime() + 60 * 60 * 1000 ? 'No Prazo' : 'Atrasado';
+            return 'No Prazo';
+        }
+        const agora = new Date();
+        return agora.getTime() > eta.getTime() ? 'Em Risco' : 'No Prazo';
+    }
+
+    // MAPEIA QUALQUER ESTRUTURA DE PLANILHA (MESMO COM NOMES EM PORTUGUÊS)
+    function mapRowToStandard(row, index) {
+        const normRow = {};
+        for (let k in row) {
+            if (Object.prototype.hasOwnProperty.call(row, k)) {
+                normRow[normalizeHeader(k)] = row[k];
+            }
+        }
+
+        const pick = (possibleKeys, def = '') => {
+            for (const pk of possibleKeys) {
+                const npk = normalizeHeader(pk);
+                if (normRow[npk] !== undefined && normRow[npk] !== null && String(normRow[npk]).trim() !== '') {
+                    return String(normRow[npk]).trim();
+                }
+            }
+            return def;
+        };
+
+        const cliente = pick(['cliente', 'embarcador', 'tomador', 'razaosocial'], `Cliente ${index + 1}`);
+        const grupo = pick(['grupo', 'grupoeconomico', 'rede'], cliente);
+        const ufOrigem = pick(['uforigem', 'ufcidadeorigem']);
+        const ufDestino = pick(['ufdestino', 'ufcidadedestino']);
+        const etapaOriginal = pick(['etapaoriginal', 'etapa', 'statusoperacional', 'statuscarga', 'status'], 'Em Trânsito');
+        const etaDestino = pick(['etadestino', 'previsaochegada', 'previsao', 'chegadadestino'], '-');
+        const dataDescarga = pick(['datadescarga', 'dataentrega', 'datachegadareal']);
+
+        return {
+            emp: pick(['emp', 'empresa', 'filial'], '01'),
+            ref: pick(['ref', 'referencia', 'nref', 'numpedido', 'nrefcliente', 'refcliente'], `REF-${99200 + index}`),
+            ordem: pick(['ordem', 'ordemdecarga', 'ordemcarga', 'os', 'nordem', 'numeroordem'], `ORD-${8400 + index}`),
+            pedido: pick(['pedido', 'npedido', 'numeropedido', 'carga', 'numped'], `PED-${10300 + index}`),
+            cliente: cliente,
+            grupo: grupo,
+            origem: formatCidadeUf(pick(['origem', 'cidadeorigem']), ufOrigem) || 'Guarulhos / SP',
+            destino: formatCidadeUf(pick(['destino', 'cidadedestino', 'praca']), ufDestino) || 'São Paulo / SP',
+            tipoCarga: pick(['tipocarga', 'tipodecarga', 'mercadoria', 'produto', 'tpcarga'], 'Carga Geral'),
+            motorista: pick(['motorista', 'condutor', 'nome'], 'Motorista Cadastrado'),
+            cavalo: pick(['cavalo', 'placacavalo', 'placa', 'trator'], 'BRA0000'),
+            carreta: pick(['carreta', 'placacarreta', 'semirreboque'], 'SEM0000'),
+            proprietario: pick(['proprietario', 'tipofrota', 'frota', 'vinculo'], 'Próprio'),
+            possuiCteOriginal: pick(['possuicteoriginal', 'possuicte', 'cte', 'statuscte', 'cteemitido', 'emitiucte'], 'NÃO'),
+            etapaOriginal: etapaOriginal,
+            etaTransp: pick(['etatransp', 'etatransportadora', 'coleta'], '-'),
+            etaOrigem: pick(['etaorigem', 'chegadaorigem'], '-'),
+            etaDestino: etaDestino,
+            sla: pick(['sla', 'pontualidade', 'prazo'], null) || estimarSla(etapaOriginal, etaDestino, dataDescarga)
+        };
+    }
+
+    // Verifica se uma linha bruta da planilha realmente contém uma carga (evita processar
+    // linhas de título, linhas em branco ou rodapés do tipo "REGISTROS: 193" como se fossem dados).
+    function isLinhaDeDadosValida(row) {
+        const normRow = {};
+        for (let k in row) {
+            if (Object.prototype.hasOwnProperty.call(row, k)) {
+                normRow[normalizeHeader(k)] = row[k];
+            }
+        }
+        const anchors = ['cliente', 'motorista', 'cavalo', 'embarcador', 'tomador'];
+        return anchors.some(a => normRow[a] !== undefined && normRow[a] !== null && String(normRow[a]).trim() !== '');
+    }
+
+    // Localiza a linha de cabeçalho real dentro da planilha, mesmo quando o cliente exporta
+    // linhas de título (nome da empresa, período do relatório) acima da tabela de fato.
+    // Procura, nas primeiras linhas da aba, por uma linha que contenha simultaneamente colunas
+    // reconhecíveis como "cliente" e "motorista"/"cavalo". Se não encontrar, assume a linha 1
+    // como cabeçalho (comportamento original, compatível com planilhas já limpas).
+    function localizarLinhaCabecalho(worksheet) {
+        const matrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, defval: '' });
+        const maxScan = Math.min(matrix.length, 15);
+        for (let i = 0; i < maxScan; i++) {
+            const cellsNorm = matrix[i].map(c => normalizeHeader(c));
+            const temCliente = cellsNorm.includes('cliente') || cellsNorm.includes('embarcador') || cellsNorm.includes('tomador');
+            const temVeiculo = cellsNorm.includes('motorista') || cellsNorm.includes('cavalo');
+            if (temCliente && temVeiculo) {
+                return i;
+            }
+        }
+        return 0; // fallback: assume cabeçalho na primeira linha
+    }
+
+    // PROCESSAMENTO DO UPLOAD DE PLANILHA
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                // raw: false faz o SheetJS formatar datas e números conforme exibidos no Excel
+                const workbook = XLSX.read(data, { type: 'array', cellDates: true, cellText: false });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+
+                // Alguns exports do cliente trazem linhas de título (nome da empresa, período do
+                // relatório) acima da tabela real. Localiza a linha de cabeçalho de verdade antes
+                // de converter para JSON, em vez de assumir que a linha 1 é sempre o cabeçalho.
+                const headerRowIdx = localizarLinhaCabecalho(worksheet);
+                const json = XLSX.utils.sheet_to_json(worksheet, { defval: '', raw: false, range: headerRowIdx });
+
+                if (!json || json.length === 0) {
+                    alert('A planilha selecionada está vazia ou não possui dados na primeira aba.');
+                    return;
+                }
+
+                // Descarta linhas que não são cargas de verdade (linhas em branco, rodapés como
+                // "REGISTROS: 193" etc.), depois converte as linhas restantes para o formato padrão
+                const linhasValidas = json.filter(isLinhaDeDadosValida);
+                if (linhasValidas.length === 0) {
+                    alert('Não foi possível identificar as colunas de Cliente/Motorista/Cavalo nesta planilha. Verifique se o arquivo segue o modelo esperado.');
+                    return;
+                }
+                const mappedData = linhasValidas.map((row, idx) => mapRowToStandard(row, idx));
+                
+                // Aplica regras de negócio (Emissão por Conta do Cliente / CT-e)
+                rawData = processRawData(mappedData);
+
+                // Atualiza indicadores visuais de arquivo
+                document.getElementById('btnRestoreDemo').style.display = 'inline-flex';
+                const fileBadge = document.getElementById('fileStatusBadge');
+                document.getElementById('fileStatusText').textContent = `${file.name} (${rawData.length} linhas)`;
+                fileBadge.style.display = 'inline-flex';
+
+                // Recarrega dropdowns de filtros dinamicamente com base nos novos dados
+                populateFilterOptions();
+                resetFilters();
+
+                // Limpa input para permitir carregar o mesmo arquivo se for alterado
+                event.target.value = '';
+
+                alert(`Planilha "${file.name}" importada com sucesso!\nTotal de ${rawData.length} registros atualizados no dashboard.`);
+            } catch (error) {
+                console.error("Erro ao ler planilha:", error);
+                alert("Ocorreu um erro ao tentar processar a planilha. Verifique se o arquivo é um Excel (.xlsx, .xls) ou CSV válido.");
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    // RESTAURAR BASE PADRÃO
+    function restoreDemoData() {
+        rawData = processRawData(rawDataInicial);
+        document.getElementById('btnRestoreDemo').style.display = 'none';
+        document.getElementById('fileStatusBadge').style.display = 'none';
+        populateFilterOptions();
+        resetFilters();
+        alert('Dados padrão de demonstração restaurados.');
+    }
+
+    // UTILITÁRIOS DE COR
+    function hexToHSL(hex) {
+        let r = parseInt(hex.slice(1, 3), 16) / 255;
+        let g = parseInt(hex.slice(3, 5), 16) / 255;
+        let b = parseInt(hex.slice(5, 7), 16) / 255;
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+        if (max === min) {
+            h = s = 0;
+        } else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+        }
+        return { h: h * 360, s: s * 100, l: l * 100 };
+    }
+
+    function hslToHex(h, s, l) {
+        s /= 100; l /= 100;
+        const k = n => (n + h / 30) % 12;
+        const a = s * Math.min(l, 1 - l);
+        const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+        const toHex = x => Math.round(255 * x).toString(16).padStart(2, '0');
+        return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+    }
+
+    function generateShades(baseHex, count) {
+        const { h, s } = hexToHSL(baseHex);
+        if (count <= 1) return [baseHex];
+        const lMin = 32, lMax = 72;
+        const shades = [];
+        for (let i = 0; i < count; i++) {
+            const l = lMax - ((lMax - lMin) * i) / (count - 1);
+            shades.push(hslToHex(h, Math.max(s, 35), l));
+        }
+        return shades;
+    }
+
+    function updateChartColor(chartKey, color) {
+        switch (chartKey) {
+            case 'client':
+                clientChart.data.datasets[0].backgroundColor = color;
+                clientChart.update();
+                break;
+            case 'stages': {
+                const count = stagesChart.data.labels.length || 1;
+                stagesChart.data.datasets[0].backgroundColor = generateShades(color, count);
+                stagesChart.update();
+                break;
+            }
+            case 'fleet': {
+                const shades = generateShades(color, 2);
+                fleetChart.data.datasets[0].backgroundColor = shades[0];
+                fleetChart.data.datasets[1].backgroundColor = shades[1];
+                fleetChart.update();
+                break;
+            }
+            case 'destinations': {
+                const count = destinationsChart.data.labels.length || 1;
+                destinationsChart.data.datasets[0].backgroundColor = generateShades(color, count);
+                destinationsChart.update();
+                break;
+            }
+        }
+    }
+
+    // INICIALIZAÇÃO
+    window.addEventListener('DOMContentLoaded', () => {
+        populateFilterOptions();
+        initCharts();
+        updateDashboard(rawData);
+    });
+
+    function populateFilterOptions() {
+        const clientSelect = document.getElementById('clientFilter');
+        const etapaSelect = document.getElementById('etapaFilter');
+        const frotaSelect = document.getElementById('frotaFilter');
+
+        // Preserva o primeiro elemento "TODOS" e limpa o resto
+        clientSelect.innerHTML = '<option value="TODOS">Todos os Clientes</option>';
+        etapaSelect.innerHTML = '<option value="TODOS">Todas as Etapas</option>';
+        frotaSelect.innerHTML = '<option value="TODOS">Todas as Frotas</option>';
+
+        const uniqueClients = [...new Set(rawData.map(d => d.cliente))].sort();
+        uniqueClients.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = isClienteEmissaoObrigatoria(c) ? `${c} (Emissão de CT-e Obrigatória)` : c;
+            clientSelect.appendChild(opt);
+        });
+
+        const uniqueEtapas = [...new Set(rawData.map(d => d.etapa))].sort();
+        uniqueEtapas.forEach(e => {
+            const opt = document.createElement('option');
+            opt.value = e;
+            opt.textContent = e;
+            etapaSelect.appendChild(opt);
+        });
+
+        // Frota: monta o dropdown a partir dos valores reais de "proprietário" da base
+        // (cobre categorias fora do padrão Próprio/Agregado/Terceiro, ex.: "Sem Veículo")
+        const uniqueFrotas = [...new Set(rawData.map(d => d.proprietario))].sort();
+        uniqueFrotas.forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f.toUpperCase();
+            opt.textContent = f;
+            frotaSelect.appendChild(opt);
+        });
+    }
+
+    // FILTRAGEM DINÂMICA
+    function filterData() {
+        const query = document.getElementById('searchInput').value.toLowerCase().trim();
+        const selectedClient = document.getElementById('clientFilter').value;
+        const selectedStatus = document.getElementById('statusFilter').value;
+        const selectedEtapa = document.getElementById('etapaFilter').value;
+        const selectedFrota = document.getElementById('frotaFilter').value;
+        const selectedCte = document.getElementById('cteFilter').value;
+
+        currentFilteredData = rawData.filter(item => {
+            const matchesSearch = !query || 
+                item.pedido.toLowerCase().includes(query) ||
+                item.ref.toLowerCase().includes(query) ||
+                item.cavalo.toLowerCase().includes(query) ||
+                item.carreta.toLowerCase().includes(query) ||
+                item.motorista.toLowerCase().includes(query) ||
+                item.destino.toLowerCase().includes(query) ||
+                item.origem.toLowerCase().includes(query);
+
+            const matchesClient = selectedClient === "TODOS" || item.cliente === selectedClient;
+            const matchesStatus = selectedStatus === "TODOS" || item.statusVeiculo === selectedStatus;
+            const matchesEtapa = selectedEtapa === "TODOS" || item.etapa === selectedEtapa;
+            const matchesFrota = selectedFrota === "TODOS" || item.proprietario.toUpperCase() === selectedFrota;
+            const matchesCte = selectedCte === "TODOS" || item.possuiCte === selectedCte;
+
+            return matchesSearch && matchesClient && matchesStatus && matchesEtapa && matchesFrota && matchesCte;
+        });
+
+        updateDashboard(currentFilteredData);
+    }
+
+    function resetFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('clientFilter').value = 'TODOS';
+        document.getElementById('statusFilter').value = 'TODOS';
+        document.getElementById('etapaFilter').value = 'TODOS';
+        document.getElementById('frotaFilter').value = 'TODOS';
+        document.getElementById('cteFilter').value = 'TODOS';
+        filterData();
+    }
+
+    function updateDashboard(data) {
+        updateKPIs(data);
+        renderTable(data);
+        updateChartsData(data);
+    }
+
+    // ATUALIZAÇÃO DOS KPIS
+    function updateKPIs(data) {
+        const total = data.length;
+        const liberados = data.filter(d => d.statusVeiculo === 'LIBERADO').length;
+        const pendentes = data.filter(d => d.statusVeiculo === 'PENDENTE').length;
+        
+        // CT-e
+        const cteEmitidos = data.filter(d => d.possuiCte === 'SIM').length;
+        const cteIsentos = data.filter(d => d.possuiCte === 'ISENTO').length;
+        const cteRegulares = cteEmitidos + cteIsentos; // Emitidos ou Emissão por Conta do Cliente
+
+        const noPrazo = data.filter(d => d.sla === 'No Prazo').length;
+        const clientesSet = new Set(data.map(d => d.cliente));
+
+        const libPct = total > 0 ? ((liberados / total) * 100).toFixed(1) : 0;
+        const penPct = total > 0 ? ((pendentes / total) * 100).toFixed(1) : 0;
+        const ctePct = total > 0 ? ((cteRegulares / total) * 100).toFixed(1) : 0;
+        const slaPct = total > 0 ? ((noPrazo / total) * 100).toFixed(1) : 0;
+
+        document.getElementById('kpiLiberados').textContent = liberados;
+        document.getElementById('kpiLiberadosPct').textContent = `${libPct}%`;
+
+        document.getElementById('kpiPendentes').textContent = pendentes;
+        document.getElementById('kpiPendentesPct').textContent = `${penPct}%`;
+
+        document.getElementById('kpiCteTotal').textContent = cteRegulares;
+        document.getElementById('kpiCtePct').textContent = `${ctePct}% Regular`;
+        document.getElementById('kpiCteDesc').textContent = `${cteEmitidos} emitidos • ${cteIsentos} p/ conta cliente`;
+
+        document.getElementById('kpiTotalPedidos').textContent = total;
+        document.getElementById('kpiClientesAtivos').textContent = `${clientesSet.size} Clientes`;
+
+        document.getElementById('kpiSlaPct').textContent = `${slaPct}%`;
+        document.getElementById('kpiNoPrazoCount').textContent = `${noPrazo} no prazo`;
+
+        document.getElementById('chartClientCount').textContent = `${clientesSet.size} Clientes`;
+        document.getElementById('tableRowCount').textContent = `Exibindo ${total} de ${rawData.length} registros`;
+    }
+
+    // RENDERIZAR TABELA COM STATUS "EMISSÃO POR CONTA DO CLIENTE"
+    function renderTable(data) {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+
+        if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 40px; color: var(--text-muted);">
+                Nenhum registro encontrado para os filtros selecionados.
+            </td></tr>`;
+            return;
+        }
+
+        data.forEach(item => {
+            const tr = document.createElement('tr');
+            
+            const isLiberado = item.statusVeiculo === 'LIBERADO';
+            const statusBadge = isLiberado 
+                ? `<span class="badge badge-liberado">✔ LIBERADO</span>` 
+                : `<span class="badge badge-pendente">⏳ PENDENTE</span>`;
+
+            // Badge de CT-e dinâmico: EMISSÃO POR CONTA DO CLIENTE
+            let cteBadge;
+            if (item.possuiCte === 'SIM') {
+                cteBadge = `<span class="badge badge-cte-sim">✔ SIM (Emitido)</span>`;
+            } else if (item.possuiCte === 'ISENTO') {
+                cteBadge = `<span class="badge badge-cte-isento" title="Emissão de responsabilidade direta do cliente conforme regra comercial">⚪ EMISSÃO POR CONTA DO CLIENTE</span>`;
+            } else {
+                cteBadge = `<span class="badge badge-cte-nao">⏳ PENDENTE</span>`;
+            }
+
+            const tagClienteIsento = item.isIsentoCte 
+                ? `<span style="font-size:10px; color:var(--brand-mint); display:block;">✦ Emissão por Conta do Cliente</span>` 
+                : '';
+
+            tr.innerHTML = `
+                <td>
+                    <strong style="color:var(--brand-mint)">${item.pedido}</strong>
+                    <span class="client-sub">${item.ref} | ${item.ordem}</span>
+                </td>
+                <td>
+                    <strong>${item.cliente}</strong>
+                    <span class="client-sub">Grupo: ${item.grupo}</span>
+                    ${tagClienteIsento}
+                </td>
+                <td>
+                    <div class="route-inline">
+                        <span>${item.origem}</span>
+                        <span class="route-arrow">➔</span>
+                        <span>${item.destino}</span>
+                    </div>
+                </td>
+                <td>
+                    <span class="placa-tag">${item.cavalo}</span> / <span class="placa-tag">${item.carreta}</span>
+                </td>
+                <td>${item.motorista}</td>
+                <td><span style="font-weight:600; color:${item.proprietario === 'Próprio' ? 'var(--brand-mint)' : 'var(--text-secondary)'}">${item.proprietario}</span></td>
+                <td><span style="font-weight:600; color:var(--brand-white);">${item.etaDestino}</span></td>
+                <td>${cteBadge}</td>
+                <td>${statusBadge}</td>
+                <td><span class="etapa-tag">${item.etapa}</span></td>
+                <td>
+                    <button class="btn-tbl-view" onclick='showDetails(${JSON.stringify(item)})'>Detalhes</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // MODAL DE DETALHES
+    function showDetails(item) {
+        document.getElementById('modalTitle').textContent = `Expedição: ${item.pedido} • ${item.cliente}`;
+        const body = document.getElementById('modalBody');
+
+        let fiscalText = '';
+        if (item.possuiCte === 'SIM') {
+            fiscalText = `<span style="color:var(--brand-cyan)">✔ CT-e Emitido e Validado na SEFAZ</span>`;
+        } else if (item.possuiCte === 'ISENTO') {
+            fiscalText = `<span style="color:var(--brand-mint)">⚪ Emissão por Conta do Cliente conforme regra de negócio (Sem Pendência Fiscal)</span>`;
+        } else {
+            fiscalText = `<span style="color:var(--brand-yellow)">⏳ Aguardando Emissão do CT-e (Pendente)</span>`;
+        }
+
+        body.innerHTML = `
+            <div class="modal-field">
+                <label>Número do Pedido</label>
+                <span>${item.pedido}</span>
+            </div>
+            <div class="modal-field">
+                <label>Nº Ordem / Referência</label>
+                <span>${item.ordem} | ${item.ref}</span>
+            </div>
+            <div class="modal-field">
+                <label>Cliente / Grupo</label>
+                <span>${item.cliente} (${item.grupo})</span>
+            </div>
+            <div class="modal-field">
+                <label>Tipo de Carga</label>
+                <span>${item.tipoCarga}</span>
+            </div>
+            <div class="modal-field">
+                <label>Origem da Viagem</label>
+                <span>${item.origem}</span>
+            </div>
+            <div class="modal-field">
+                <label>Destino da Viagem</label>
+                <span>${item.destino}</span>
+            </div>
+            <div class="modal-field">
+                <label>Cavalo / Carreta</label>
+                <span>${item.cavalo} / ${item.carreta}</span>
+            </div>
+            <div class="modal-field">
+                <label>Motorista Responsável</label>
+                <span>${item.motorista}</span>
+            </div>
+            <div class="modal-field">
+                <label>Vínculo da Frota</label>
+                <span>${item.proprietario}</span>
+            </div>
+            <div class="modal-field">
+                <label>Regra Fiscal (CT-e)</label>
+                ${fiscalText}
+            </div>
+            <div class="modal-field">
+                <label>ETA Transportadora / Origem</label>
+                <span>${item.etaTransp} ➔ ${item.etaOrigem}</span>
+            </div>
+            <div class="modal-field">
+                <label>Previsão Chegada (ETA Destino)</label>
+                <span style="color:var(--brand-mint)">${item.etaDestino} (${item.sla})</span>
+            </div>
+            <div class="modal-field full">
+                <label>Etapa Atual da Carga</label>
+                <span style="background: rgba(35, 180, 165, 0.15); padding: 8px 12px; border-radius: 8px; border-left: 3px solid var(--brand-cyan);">
+                    ${item.etapa} — Status Veículo: ${item.statusVeiculo}
+                </span>
+            </div>
+        `;
+        document.getElementById('detailsModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('detailsModal').style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+        const modal = document.getElementById('detailsModal');
+        if (event.target === modal) {
+            closeModal();
+        }
+    }
+
+    // INICIALIZAÇÃO DOS GRÁFICOS
+    function initCharts() {
+        Chart.defaults.color = '#B4C6CC';
+        Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+
+        // 1. Clientes
+        const ctxClient = document.getElementById('clientOrdersChart').getContext('2d');
+        clientChart = new Chart(ctxClient, {
+            type: 'bar',
+            data: { labels: [], datasets: [{ label: 'Pedidos', data: [], backgroundColor: PALETTE.vibrantCyan, borderRadius: 6 }] },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: PALETTE.cardBg,
+                        titleColor: PALETTE.offWhite,
+                        bodyColor: PALETTE.mintGreen,
+                        borderColor: PALETTE.vibrantCyan,
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { stepSize: 1 }
+                    },
+                    y: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+
+        // 2. Etapas
+        const ctxStages = document.getElementById('stagesChart').getContext('2d');
+        stagesChart = new Chart(ctxStages, {
+            type: 'doughnut',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: [
+                        PALETTE.vibrantCyan,
+                        PALETTE.mintGreen,
+                        PALETTE.oceanBlue,
+                        PALETTE.goldenYellow,
+                        '#D5E8AE'
+                    ],
+                    borderWidth: 2,
+                    borderColor: PALETTE.baseDark
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '68%',
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 14,
+                            color: PALETTE.offWhite,
+                            font: { size: 12 }
+                        }
+                    }
+                }
+            }
+        });
+
+        // 3. Perfil Frota
+        const ctxFleet = document.getElementById('fleetChart').getContext('2d');
+        fleetChart = new Chart(ctxFleet, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Liberados',
+                        data: [],
+                        backgroundColor: PALETTE.mintGreen,
+                        borderRadius: 5
+                    },
+                    {
+                        label: 'Pendentes',
+                        data: [],
+                        backgroundColor: PALETTE.goldenYellow,
+                        borderRadius: 5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: PALETTE.offWhite, boxWidth: 12 }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        stacked: true
+                    },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        stacked: true,
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+
+        // 4. Destinos
+        const ctxDest = document.getElementById('destinationsChart').getContext('2d');
+        destinationsChart = new Chart(ctxDest, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Cargas Enviadas',
+                    data: [],
+                    backgroundColor: [
+                        PALETTE.oceanBlue,
+                        PALETTE.vibrantCyan,
+                        PALETTE.mintGreen,
+                        '#299691',
+                        '#1F8B94'
+                    ],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            maxRotation: 25,
+                            minRotation: 15,
+                            font: { size: 11 }
+                        }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateChartsData(data) {
+        // 1. Clientes
+        const clientCounts = {};
+        data.forEach(d => { clientCounts[d.cliente] = (clientCounts[d.cliente] || 0) + 1; });
+        const sortedClients = Object.entries(clientCounts).sort((a, b) => b[1] - a[1]);
+        clientChart.data.labels = sortedClients.map(c => c[0]);
+        clientChart.data.datasets[0].data = sortedClients.map(c => c[1]);
+        clientChart.update();
+
+        // 2. Etapas
+        const etapaCounts = {};
+        data.forEach(d => { etapaCounts[d.etapa] = (etapaCounts[d.etapa] || 0) + 1; });
+        stagesChart.data.labels = Object.keys(etapaCounts);
+        stagesChart.data.datasets[0].data = Object.values(etapaCounts);
+        stagesChart.update();
+
+        // 3. Frota & Liberação
+        // Categorias fixas na ordem preferida, seguidas de qualquer outra categoria de
+        // "proprietário" que apareça nos dados reais (ex.: "Sem Veículo") e que ainda não
+        // esteja prevista — assim nenhuma carga fica invisível neste gráfico.
+        const fleetTypesBase = ['Próprio', 'Agregado', 'Terceiro'];
+        const outrasCategorias = [...new Set(data.map(d => d.proprietario))]
+            .filter(p => !fleetTypesBase.includes(p))
+            .sort();
+        const fleetTypes = [...fleetTypesBase, ...outrasCategorias];
+        const libData = fleetTypes.map(f => data.filter(d => d.proprietario === f && d.statusVeiculo === 'LIBERADO').length);
+        const penData = fleetTypes.map(f => data.filter(d => d.proprietario === f && d.statusVeiculo === 'PENDENTE').length);
+        fleetChart.data.labels = fleetTypes;
+        fleetChart.data.datasets[0].data = libData;
+        fleetChart.data.datasets[1].data = penData;
+        fleetChart.update();
+
+        // 4. Destinos
+        const destCounts = {};
+        data.forEach(d => { destCounts[d.destino] = (destCounts[d.destino] || 0) + 1; });
+        const sortedDest = Object.entries(destCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        destinationsChart.data.labels = sortedDest.map(d => d[0]);
+        destinationsChart.data.datasets[0].data = sortedDest.map(d => d[1]);
+        destinationsChart.update();
+    }
+</script>
+
+</body>
+</html>
